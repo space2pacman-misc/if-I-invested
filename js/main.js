@@ -88,6 +88,7 @@ let app = new Vue({
 
 			if(this.isAnalyzed === true) {
 				this.isAnalyzed = null;
+				this.timestamp = null;
 				this.prices = [];
 			}
 
