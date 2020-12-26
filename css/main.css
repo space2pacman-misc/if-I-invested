@@ -1,0 +1,11 @@
+[v-cloak] {
+	display: none;
+}
+
+.chart {
+	min-height: 400px
+}
+
+.table-companies {
+	margin-bottom: 80px;
+}

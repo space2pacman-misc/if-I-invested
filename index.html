@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+	<link rel="stylesheet" href="css/main.css">
+	<title>If i invested</title>
+</head>
+
+<body>
+	<div class="container" id="app" v-cloak>
+		<h1 class="text-center mt-5">If I invested</h1>
+		<form @submit.prevent="search">
+			<div class="input-group mt-5 mb-4">
+				<input type="text" class="form-control" placeholder="Enter company name" v-model="query">
+			<button class="btn btn-primary" type="button" @click="search" :disabled="checkFields(query)">
+				<i class="fas fa-search"></i>
+			</button>
+		</form>
+		</div>
+		<div v-if="companies.list.length > 0">
+			<ul class="nav nav-tabs mb-4">
+				<li class="nav-item">
+					<a class="nav-link" :class="{'active': tab === 'list'}" href="#" @click.prevent="switchTab('list')">All</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" :class="{'active': tab === 'selected'}" href="#" @click.prevent="switchTab('selected')">
+						Selected
+						<span class="badge bg-primary">{{ companies.selected.length > 0 ? companies.selected.length : null }}</span>
+					</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" :class="[{'active': tab === 'analysis'}, {'disabled': isAnalyzed === null || isAnalyzed === false }]" href="#" @click.prevent="switchTab('analysis')">
+						Analysis
+						<span class="badge bg-warning" v-if="isAnalyzed === false">{{ companies.selected.length - symbols.length }} / {{ companies.selected.length }}</span>
+						<span class="spinner-border spinner-border-sm text-primary" v-if="isAnalyzed === false"></span>
+					</a>
+				</li>
+			</ul>
+			<div v-if="tab === 'list'" class="row">
+				<div v-for="company in companies.list" class="col-4 mb-4">
+					<div class="card h-100">
+						<div class="card-body" @click="select(company)">
+							<h6 class="card-title">{{ company.name }} ({{ company.symbol }})</h6>
+							<div class="border p-2 d-inline-block" style="min-height: 64px; line-height: 4rem;">
+								<img width="64" :src="`${api.financialmodelingprep.image}${company.symbol}.jpg`" onerror="this.src = 'img/default-logo.png';">
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div v-if="tab === 'selected'" >
+				<div v-if="companies.selected.length > 0">
+					<div class="row">
+						<div class="col">From</div>
+						<div class="col">To</div>
+						<div class="col">Investment</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							<input type="date" class="form-control" v-model="date.from">
+						</div>
+						<div class="col">
+							<input type="date" class="form-control" v-model="date.to">
+						</div>
+						<div class="col">
+							<div class="input-group mb-3">
+								<span class="input-group-text" id="basic-addon1">$</span>
+								<input type="number" class="form-control" placeholder="1000" v-model.number="investment">
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col d-flex justify-content-end mb-3">
+							<button type="button" class="btn btn-success" @click="analyze" :disabled="checkFields([date.from, date.to, investment]) || isAnalyzed === false">Analyze</button>
+						</div>
+					</div>
+					<div class="row">
+						<div v-for="company in companies.selected" class="col-4 mb-4">
+							<div class="card h-100">
+								<div class="card-body" @click="select(company)">
+									<h6 class="card-title">{{ company.name }} ({{ company.symbol }})</h6>
+									<div class="border p-2 d-inline-block" style="min-height: 64px; line-height: 4rem;">
+										<img width="64" :src="`${api.financialmodelingprep.image}${company.symbol}.jpg`">
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div v-else class="mt-5 text-center text-muted">
+					<h4>Select company</h4>
+				</div>
+			</div>
+			<div v-if="tab === 'analysis'">
+				<div class="row mb-5">
+					<div class="col-4">
+						<div class="card">
+							<div class="card-body">
+								<div class="card-text mb-2">Invested</div>
+								<h4 class="card-title mb-0">${{ investment - rest }}</h4>
+							</div>
+						</div>
+					</div>
+					<div class="col-4">
+						<div class="card">
+							<div class="card-body">
+								<div class="card-text mb-2">Rest</div>
+								<h4 class="card-title mb-0">${{ rest }}</h4>
+							</div>
+						</div>
+					</div>
+					<div class="col-4">
+						<div class="card">
+							<div class="card-body">
+								<div class="card-text mb-2">Earned</div>
+								<h4 class="card-title mb-0" :class="getEarned() === 0 ? '' : getEarned() > 0 ? 'text-success' : 'text-danger'">{{ getEarned() >= 0 ? '$' + getEarned() : '-$' + Math.abs(getEarned()) }}</h4>
+							</div>
+						</div>
+					</div>
+				</div>
+				<table class="table table-companies">
+					<tr>
+						<td>Company</td>
+						<td>Date from</td>
+						<td>Date to</td>
+						<td>Invested</td>
+						<td>Income</td>
+					</tr>
+					<tr v-for="(name, index) in names">
+						<td>{{ name }}</td>
+						<td>{{ date.from }}</td>
+						<td>{{ date.to }}</td>
+						<td>${{ invested[index] }}</td>
+						<td :class="portfolio[index] === 0 ? '' : portfolio[index] > 0 ? 'text-success' : 'text-danger'">{{ portfolio[index] >= 0 ? '$' + portfolio[index] : '-$' + Math.abs(portfolio[index]) }}</td>
+					</tr>
+				</table>
+				<canvas ref="chart" class="chart"></canvas>
+			</div>
+		</div>
+		<div v-else class="mt-5 text-center text-muted">
+			<div v-if="isFound === true">
+				<h4>Nothing found for: {{ query }}</h4>
+			</div>
+			<div v-if="isFound === null">
+				<h4>Start your company search</h4>
+			</div>
+		</div>
+		<div class="text-center">
+			<span class="spinner-border spinner-border-lg text-primary" v-if="isFound === false"></span>
+		</div>
+	</div>
+	<script src="js/bootstrap.min.js"></script>
+	<script src="js/vue.min.js"></script>
+	<script src="js/chart.min.js"></script>
+	<script src="js/main.js"></script>
+</body>
+</html>
